@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Spotify Connect Test</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
+
+</head>
+<body>
+  <h1>Spotify Connect Demo</h1>
+  <a href="/login"><button>Connect Spotify</button></a>
+  <div id="search">
+    <h2>Search Spotify</h2>
+    <input type="text" id="search-query" placeholder="Search for songs">
+    <button id="search-button">Search</button>
+    <div id="search-results"></div>
+  </div>
+
+  <div id="main-container">
+    <div id="playlists"></div>
+    <div id="tracks"></div>
+  </div>
+
+  <script src="js/script.js"></script>
+
+  <div id="player-bar">
+    <div id="track-info">
+      <img id="track-image" src="" alt="Album Cover">
+      <div>
+        <div id="track-name">No track playing</div>
+        <div id="track-artist"></div>
+      </div>
+    </div>
+
+    <div id="player-controls">
+      <button id="prev">⏮</button>
+      <button id="play">▶</button>
+      <button id="pause">⏸</button>
+      <button id="next">⏭</button>
+      <input type="range" id="volume" min="0" max="100" value="50">
+    </div>
+  </div>
+
+
+</body>
+</html>
