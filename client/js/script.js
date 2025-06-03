@@ -10,7 +10,27 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("No Spotify token found!");
         return;
     }
+// 🎭 Аккаунт меню переключение
+    document.getElementById("user-icon").addEventListener("click", () => {
+        const dropdown = document.getElementById("dropdown");
+        dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
 
+// 🔗 Переносим логин Spotify на кнопку
+    document.getElementById("connect-btn").addEventListener("click", () => {
+        window.location.href = "/login";
+    });
+
+    document.getElementById('open-search').addEventListener('click', () => {
+        document.getElementById('search-overlay').style.display = 'flex';
+    });
+
+// ❌ Кнопка закрыть поиск
+    document.getElementById('close-search').addEventListener('click', () => {
+        document.getElementById('search-overlay').style.display = 'none';
+        document.getElementById('search-query').value = '';
+        document.getElementById('search-results').innerHTML = '';
+    });
     const playlistsDiv = document.getElementById("playlists");
     const tracksDiv = document.getElementById("tracks");
 
@@ -113,6 +133,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Authorization': `Bearer ${savedToken}`
                 }
             });
+
+            setInterval(() => {
+                if (playerInstance) {
+                    playerInstance.getCurrentState().then(state => {
+                        if (state) {
+                            const pos = state.position / 1000;
+                            const dur = state.duration / 1000;
+                            const percent = (pos / dur) * 100;
+
+                            document.getElementById('progress-bar').value = pos;
+                            document.getElementById('current-time').textContent = formatTime(pos);
+                            document.getElementById('duration').textContent = formatTime(dur);
+
+                            document.getElementById('progress-bar').style.background = `linear-gradient(to right, #1db954 ${percent}%, #444 ${percent}%)`;
+                        }
+                    });
+                }
+            }, 1000);
+
+
         });
 
         player.addListener('player_state_changed', state => {
@@ -121,11 +161,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('track-image').src = track.album.images[0].url;
                 document.getElementById('track-name').innerText = track.name;
                 document.getElementById('track-artist').innerText = track.artists.map(a => a.name).join(', ');
+
+                const durationSec = state.duration / 1000;
+                const positionSec = state.position / 1000;
+
+                document.getElementById('progress-bar').max = durationSec;
+                document.getElementById('progress-bar').value = positionSec;
+                document.getElementById('current-time').textContent = formatTime(positionSec);
+                document.getElementById('duration').textContent = formatTime(durationSec);
             }
         });
-
         player.connect();
     };
+
+    function formatTime(sec) {
+        const minutes = Math.floor(sec / 60);
+        const seconds = Math.floor(sec % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
 
     function playTrack(trackUri) {
         if (!deviceId) {
@@ -276,4 +329,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    document.getElementById('progress-bar').addEventListener('input', (e) => {
+        const seekPos = parseFloat(e.target.value);
+        if (playerInstance) {
+            playerInstance.seek(seekPos * 1000);
+        }
+    });
+
 });

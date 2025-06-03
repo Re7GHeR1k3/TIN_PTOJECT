@@ -7,14 +7,28 @@
 
 </head>
 <body>
-  <h1>Spotify Connect Demo</h1>
-  <a href="/login"><button>Connect Spotify</button></a>
-  <div id="search">
+<div id="user-menu">
+  <button id="user-icon">👤</button>
+  <div id="dropdown">
+    <button id="connect-btn">Connect Spotify</button>
+    <button id="login-btn">Login / Register</button>
+    <button id="settings-btn">Settings</button>
+  </div>
+</div>
+
+  <h1>Spotify Demo</h1>
+
+  <!-- 🔍 Кнопка и оверлей поиска -->
+  <button id="open-search">🔍 Search songs</button>
+
+  <div id="search-overlay">
+    <button id="close-search">✖</button>
     <h2>Search Spotify</h2>
     <input type="text" id="search-query" placeholder="Search for songs">
     <button id="search-button">Search</button>
     <div id="search-results"></div>
   </div>
+
 
   <div id="main-container">
     <div id="playlists"></div>
@@ -29,6 +43,11 @@
       <div>
         <div id="track-name">No track playing</div>
         <div id="track-artist"></div>
+        <div id="progress-container">
+          <span id="current-time">0:00</span>
+          <input type="range" id="progress-bar" min="0" max="100" value="0">
+          <span id="duration">0:00</span>
+        </div>
       </div>
     </div>
 
