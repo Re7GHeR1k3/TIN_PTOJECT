@@ -10,31 +10,339 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("No Spotify token found!");
         return;
     }
-// 🎭 Аккаунт меню переключение
-    document.getElementById("user-icon").addEventListener("click", () => {
+
+    // 👥 Элементы управления профилем
+    const profileModal = document.getElementById("profile-modal");
+    const profileUsername = document.getElementById("profile-username");
+    const profileEmail = document.getElementById("profile-email");
+    const profilePassword = document.getElementById("profile-password");
+    const profileAvatar = document.getElementById("profile-avatar");
+    const avatarUpload = document.getElementById("avatar-upload");
+    const saveBtn = document.getElementById("save-profile");
+    const logoutBtn = document.getElementById("logout-btn");
+    const profileMsg = document.getElementById("profile-message");
+    const settingsBtn = document.getElementById("settings-btn");
+
+    // 🖼️ Функция для обновления иконки пользователя
+    function updateUserIcon(user) {
+        const userIcon = document.getElementById("user-icon");
+        const userAvatarIcon = document.getElementById("user-avatar-icon");
+        const userInitial = document.getElementById("user-initial");
+
+        if (user && user.avatar && user.avatar !== "https://via.placeholder.com/100") {
+            userAvatarIcon.src = user.avatar;
+            userAvatarIcon.style.display = "block";
+            userInitial.style.display = "none";
+            userIcon.style.padding = "0";
+        } else if (user && user.username) {
+            userAvatarIcon.style.display = "none";
+            userInitial.style.display = "block";
+            userInitial.textContent = user.username[0].toUpperCase();
+            userIcon.style.padding = "10px 14px";
+        } else {
+            userAvatarIcon.style.display = "none";
+            userInitial.style.display = "block";
+            userInitial.textContent = "👤";
+            userIcon.style.padding = "10px 14px";
+        }
+    }
+
+    // 👤 Функция для обновления состояния пользователя
+    function updateUserState() {
+        const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
+
+        if (!currentUser) {
+            // Пользователь не вошел в систему
+            settingsBtn.style.display = "none";
+            updateUserIcon(null);
+        } else {
+            // Пользователь вошел в систему
+            settingsBtn.style.display = "block";
+            updateUserIcon(currentUser);
+        }
+    }
+
+    // ✅ Проверка состояния при загрузке страницы
+    updateUserState();
+
+    // ⚙️ Открытие модального окна профиля
+    settingsBtn?.addEventListener("click", () => {
+        const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
+        if (!currentUser) return;
+
+        profileModal.style.display = "flex";
+
+        // Загружаем актуальные данные пользователя
+        const savedUsers = JSON.parse(localStorage.getItem("users")) || [];
+        const freshUser = savedUsers.find(u => u.email === currentUser.email) || currentUser;
+
+        profileUsername.value = freshUser.username || "";
+        profileEmail.value = freshUser.email || "";
+        profilePassword.value = freshUser.password || "";
+        profileAvatar.src = freshUser.avatar || "https://via.placeholder.com/100";
+
+        // Очищаем сообщения
+        profileMsg.textContent = "";
+    });
+
+    // 📤 Загрузка аватара
+    avatarUpload?.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            profileMsg.textContent = "⚠️ File too large! Max 2MB.";
+            profileMsg.style.color = "orange";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            profileAvatar.src = reader.result;
+            profileMsg.textContent = "📷 Image loaded! Don't forget to save.";
+            profileMsg.style.color = "#1db954";
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // 💾 Сохранение изменений профиля
+    saveBtn?.addEventListener("click", () => {
+        const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
+        if (!currentUser) {
+            profileMsg.textContent = "❌ User not logged in!";
+            profileMsg.style.color = "red";
+            return;
+        }
+
+        const updatedName = profileUsername.value.trim();
+        const updatedEmail = profileEmail.value.trim();
+        const updatedPass = profilePassword.value.trim();
+        const updatedAvatar = profileAvatar.src;
+
+        // Валидация данных
+        if (!updatedName || !updatedEmail || !updatedPass) {
+            profileMsg.textContent = "❌ Please fill in all fields!";
+            profileMsg.style.color = "red";
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(updatedEmail)) {
+            profileMsg.textContent = "❌ Invalid email format!";
+            profileMsg.style.color = "red";
+            return;
+        }
+
+        const users = JSON.parse(localStorage.getItem("users")) || [];
+
+        const emailExists = users.find(u => u.email === updatedEmail && u.email !== currentUser.email);
+        if (emailExists) {
+            profileMsg.textContent = "❌ Email already in use!";
+            profileMsg.style.color = "red";
+            return;
+        }
+
+        const userIndex = users.findIndex(u => u.email === currentUser.email);
+
+        const updatedUser = {
+            username: updatedName,
+            email: updatedEmail,
+            password: updatedPass,
+            avatar: updatedAvatar
+        };
+
+        if (userIndex !== -1) {
+            // Обновляем существующего пользователя
+            users[userIndex] = updatedUser;
+        } else {
+            // Добавляем пользователя, если не найден
+            users.push(updatedUser);
+        }
+
+        localStorage.setItem("users", JSON.stringify(users));
+        localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
+
+        // Обновляем иконку пользователя
+        updateUserIcon(updatedUser);
+
+        profileMsg.textContent = "✅ Profile updated successfully!";
+        profileMsg.style.color = "#1db954";
+
+        setTimeout(() => {
+            profileModal.style.display = "none";
+            profileMsg.textContent = "";
+        }, 1500);
+    });
+
+    // 🔒 Выход из аккаунта
+    logoutBtn?.addEventListener("click", () => {
+        localStorage.removeItem("loggedInUser");
+        profileModal.style.display = "none";
+        updateUserState(); // Обновляем состояние интерфейса
+        profileMsg.textContent = "";
+    });
+
+    // ❌ Закрытие модального окна профиля
+    document.getElementById("close-profile")?.addEventListener("click", () => {
+        profileModal.style.display = "none";
+        profileMsg.textContent = "";
+    });
+
+    // 🎭 Переключение dropdown меню
+    document.getElementById("user-icon")?.addEventListener("click", () => {
         const dropdown = document.getElementById("dropdown");
         dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
     });
 
-// 🔗 Переносим логин Spotify на кнопку
-    document.getElementById("connect-btn").addEventListener("click", () => {
+    // Закрытие dropdown при клике вне его
+    document.addEventListener("click", (e) => {
+        const dropdown = document.getElementById("dropdown");
+        const userIcon = document.getElementById("user-icon");
+        if (!userIcon.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = "none";
+        }
+    });
+
+    // 🔐 Модальное окно входа/регистрации
+    const modal = document.getElementById("auth-modal");
+    const toggleLink = document.getElementById("toggle-link");
+    const authTitle = document.getElementById("auth-title");
+    const authUsername = document.getElementById("auth-username");
+    const authEmail = document.getElementById("auth-email");
+    const authPassword = document.getElementById("auth-password");
+    const authSubmit = document.getElementById("auth-submit");
+    const authMessage = document.getElementById("auth-message");
+
+    let isLoginMode = true;
+
+    // Открытие модального окна входа
+    document.getElementById("login-btn")?.addEventListener("click", () => {
+        modal.style.display = "flex";
+        authMessage.textContent = "";
+    });
+
+    // Закрытие модального окна входа
+    document.getElementById("close-auth")?.addEventListener("click", () => {
+        modal.style.display = "none";
+        authMessage.textContent = "";
+        // Очищаем поля
+        authEmail.value = "";
+        authPassword.value = "";
+        authUsername.value = "";
+    });
+
+    // Переключение между входом и регистрацией
+    toggleLink?.addEventListener("click", () => {
+        isLoginMode = !isLoginMode;
+        authTitle.textContent = isLoginMode ? "Login" : "Register";
+        authSubmit.textContent = isLoginMode ? "Login" : "Register";
+        authUsername.style.display = isLoginMode ? "none" : "block";
+        toggleLink.textContent = isLoginMode ? "Register" : "Login";
+        document.getElementById("auth-toggle").innerHTML = isLoginMode
+            ? `Don't have an account? <span id="toggle-link">Register</span>`
+            : `Already have an account? <span id="toggle-link">Login</span>`;
+        authMessage.textContent = "";
+    });
+
+    // Обработка входа/регистрации
+    authSubmit?.addEventListener("click", () => {
+        const email = authEmail.value.trim();
+        const pass = authPassword.value.trim();
+        const username = authUsername.value.trim();
+        const users = JSON.parse(localStorage.getItem("users") || "[]");
+
+        // Валидация полей
+        if (!email || !pass || (!isLoginMode && !username)) {
+            authMessage.textContent = "❌ Please fill in all fields!";
+            authMessage.style.color = "red";
+            return;
+        }
+
+        // Проверка email формата
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            authMessage.textContent = "❌ Invalid email format!";
+            authMessage.style.color = "red";
+            return;
+        }
+
+        if (isLoginMode) {
+            // Вход в систему
+            const user = users.find(u => u.email === email && u.password === pass);
+            if (user) {
+                localStorage.setItem("loggedInUser", JSON.stringify(user));
+                authMessage.textContent = `✅ Welcome back, ${user.username}!`;
+                authMessage.style.color = "#1db954";
+
+                setTimeout(() => {
+                    modal.style.display = "none";
+                    updateUserState(); // Обновляем состояние интерфейса
+                    authMessage.textContent = "";
+                    // Очищаем поля
+                    authEmail.value = "";
+                    authPassword.value = "";
+                }, 1000);
+            } else {
+                authMessage.textContent = "❌ Invalid email or password!";
+                authMessage.style.color = "red";
+            }
+        } else {
+            // Регистрация
+            if (users.find(u => u.email === email)) {
+                authMessage.textContent = "❌ User with this email already exists!";
+                authMessage.style.color = "red";
+            } else {
+                const newUser = {
+                    username,
+                    email,
+                    password: pass,
+                    avatar: null
+                };
+                users.push(newUser);
+                localStorage.setItem("users", JSON.stringify(users));
+                localStorage.setItem("loggedInUser", JSON.stringify(newUser));
+
+                authMessage.textContent = `✅ Welcome, ${username}! Account created successfully!`;
+                authMessage.style.color = "#1db954";
+
+                setTimeout(() => {
+                    modal.style.display = "none";
+                    updateUserState(); // Обновляем состояние интерфейса
+                    authMessage.textContent = "";
+                    // Очищаем поля
+                    authEmail.value = "";
+                    authPassword.value = "";
+                    authUsername.value = "";
+                }, 1000);
+            }
+        }
+    });
+
+    // Остальной код для Spotify остается без изменений...
+
+    // 🔗 Подключение к Spotify
+    document.getElementById("connect-btn")?.addEventListener("click", () => {
         window.location.href = "/login";
     });
 
-    document.getElementById('open-search').addEventListener('click', () => {
+    // 🔍 Поиск
+    document.getElementById('open-search')?.addEventListener('click', () => {
         document.getElementById('search-overlay').style.display = 'flex';
     });
 
-// ❌ Кнопка закрыть поиск
-    document.getElementById('close-search').addEventListener('click', () => {
+    document.getElementById('close-search')?.addEventListener('click', () => {
         document.getElementById('search-overlay').style.display = 'none';
         document.getElementById('search-query').value = '';
         document.getElementById('search-results').innerHTML = '';
     });
+
+    // Здесь должен быть весь остальной код для Spotify функциональности
+    // (плейлисты, треки, плеер и т.д.)
+
     const playlistsDiv = document.getElementById("playlists");
     const tracksDiv = document.getElementById("tracks");
 
-
+    // Загрузка плейлистов пользователя
     fetch("https://api.spotify.com/v1/me/playlists", {
         headers: { Authorization: "Bearer " + savedToken }
     })
@@ -46,11 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const div = document.createElement("div");
                     div.style.marginBottom = '10px';
                     div.innerHTML = `
-                        <a href="#" data-id="${pl.id}">
-                            <img src="${pl.images[0] ? pl.images[0].url : ''}" width="100" /><br>
-                            <small>${pl.name}</small>
-                        </a>
-                    `;
+                    <a href="#" data-id="${pl.id}">
+                        <img src="${pl.images[0] ? pl.images[0].url : ''}" width="100" /><br>
+                        <small>${pl.name}</small>
+                    </a>
+                `;
                     playlistsDiv.appendChild(div);
                 });
                 attachPlaylistClickHandlers();
@@ -92,12 +400,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     trackDiv.style.borderBottom = '1px solid #333';
 
                     trackDiv.innerHTML = `
-                <img src="${track.album.images[2] ? track.album.images[2].url : ''}" width="40" height="40" style="margin-right: 10px; border-radius: 4px;" />
-                <div>
-                    <strong>${track.name}</strong><br>
-                    <small>${track.artists.map(a => a.name).join(', ')}</small>
-                </div>
-            `;
+                    <img src="${track.album.images[2] ? track.album.images[2].url : ''}" width="40" height="40" style="margin-right: 10px; border-radius: 4px;" />
+                    <div>
+                        <strong>${track.name}</strong><br>
+                        <small>${track.artists.map(a => a.name).join(', ')}</small>
+                    </div>
+                `;
 
                     trackDiv.addEventListener('click', () => {
                         playTrackInContext(`spotify:playlist:${playlistId}`, track.uri);
@@ -108,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-
+    // Остальной код Spotify плеера...
     let deviceId = null;
     let playerInstance = null;
 
@@ -151,8 +459,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }, 1000);
-
-
         });
 
         player.addListener('player_state_changed', state => {
@@ -178,28 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = Math.floor(sec / 60);
         const seconds = Math.floor(sec % 60);
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    function playTrack(trackUri) {
-        if (!deviceId) {
-            console.error("Device not ready yet!");
-            return;
-        }
-
-        fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ uris: [trackUri] }),
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${savedToken}`
-            }
-        }).then(res => {
-            if (res.status === 204) {
-                console.log("Playing track:", trackUri);
-            } else {
-                res.json().then(data => console.error("Error playing track:", data));
-            }
-        });
     }
 
     function playTrackInContext(playlistUri, trackUri) {
@@ -230,7 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    document.getElementById('search-button').addEventListener('click', () => {
+
+    // Поиск треков
+    document.getElementById('search-button')?.addEventListener('click', () => {
         const query = document.getElementById('search-query').value.trim();
         if (query) {
             searchTracks(query);
@@ -259,12 +545,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     div.style.borderBottom = '1px solid #333';
 
                     div.innerHTML = `
-                <img src="${track.album.images[2] ? track.album.images[2].url : ''}" width="40" height="40" style="margin-right: 10px; border-radius: 4px;" />
-                <div>
-                    <strong>${track.name}</strong><br>
-                    <small>${track.artists.map(a => a.name).join(', ')}</small>
-                </div>
-            `;
+                    <img src="${track.album.images[2] ? track.album.images[2].url : ''}" width="40" height="40" style="margin-right: 10px; border-radius: 4px;" />
+                    <div>
+                        <strong>${track.name}</strong><br>
+                        <small>${track.artists.map(a => a.name).join(', ')}</small>
+                    </div>
+                `;
 
                     div.addEventListener('click', () => {
                         playDirectTrack(track.uri);
@@ -303,25 +589,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
-
-    document.getElementById('play').addEventListener('click', () => {
+    // Управление плеером
+    document.getElementById('play')?.addEventListener('click', () => {
         if (playerInstance) playerInstance.resume();
     });
 
-    document.getElementById('pause').addEventListener('click', () => {
+    document.getElementById('pause')?.addEventListener('click', () => {
         if (playerInstance) playerInstance.pause();
     });
 
-    document.getElementById('next').addEventListener('click', () => {
+    document.getElementById('next')?.addEventListener('click', () => {
         if (playerInstance) playerInstance.nextTrack();
     });
 
-    document.getElementById('prev').addEventListener('click', () => {
+    document.getElementById('prev')?.addEventListener('click', () => {
         if (playerInstance) playerInstance.previousTrack();
     });
 
-    document.getElementById('volume').addEventListener('input', (e) => {
+    document.getElementById('volume')?.addEventListener('input', (e) => {
         if (playerInstance) {
             const volumeValue = e.target.value / 100;
             playerInstance.setVolume(volumeValue).then(() => {
@@ -330,11 +615,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('progress-bar').addEventListener('input', (e) => {
+    document.getElementById('progress-bar')?.addEventListener('input', (e) => {
         const seekPos = parseFloat(e.target.value);
         if (playerInstance) {
             playerInstance.seek(seekPos * 1000);
         }
     });
-
 });

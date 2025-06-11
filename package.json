@@ -1,8 +1,12 @@
 {
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "request": "^2.88.2"
+    "express-session": "^1.18.1",
+    "mysql2": "^3.14.1",
+    "request": "^2.88.2",
+    "sequelize": "^6.37.7"
   }
 }
